@@ -1,0 +1,2573 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="app-version" content="theme-v5-generic-access-horizontal-management">
+  <title>Hệ thống kiểm soát ra vào</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: "Times New Roman", Times, serif; margin: 24px; background: #f7f7f7; color: #222; }
+    h1 { margin-bottom: 8px; }
+    h2, h3 { margin-top: 24px; margin-bottom: 10px; }
+    .status-line { margin-bottom: 16px; font-size: 14px; }
+    .online, .error { font-weight: bold; }
+    .filter-panel { background: white; padding: 16px; border: 1px solid #ccc; border-radius: 8px; margin: 18px 0; }
+    .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    label { display: block; font-weight: bold; margin-bottom: 6px; }
+    input, select, button { width: 100%; padding: 10px; border: 1px solid #aaa; border-radius: 6px; font-size: 14px; }
+    button { cursor: pointer; font-weight: bold; background: white; }
+    button:hover { background: #ededed; }
+    .button-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+    .export-group { display: grid; grid-template-columns: minmax(210px, 1fr) minmax(150px, .7fr); gap: 10px; }
+    .report-title { text-align: center; margin: 0 0 8px; font-size: 24px; }
+    .report-meta { margin: 0 0 14px; font-size: 13px; }
+        .pdf-report { position: fixed; left: -100000px; top: 0; width: 1120px; background: #fff; color: #111; padding: 28px; font-family: "Times New Roman", Times, serif; }
+    .pdf-report table { min-width: 0; font-size: 12px; }
+    .pdf-report th, .pdf-report td { white-space: normal; padding: 6px; }
+    .pdf-report h2 { margin-top: 18px; font-size: 18px; }
+    @media (max-width: 700px) { .export-group { grid-template-columns: 1fr; } }
+    .table-wrap { overflow-x: auto; background: white; border-radius: 8px; }
+    table { border-collapse: collapse; width: 100%; min-width: 720px; }
+    th, td { border: 1px solid #ccc; padding: 9px; text-align: left; white-space: nowrap; }
+    th { background: #eee; }
+    tbody tr:nth-child(even) { background: #fafafa; }
+    .empty { text-align: center; padding: 20px; }
+    .inside, .outside, .unknown { font-weight: bold; }
+    .hidden { display: none !important; }
+    @media (max-width: 700px) { body { margin: 12px; } h1 { font-size: 22px; } }
+
+    .top-nav { display: flex; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+    .top-nav button { width: auto; min-width: 190px; padding: 11px 18px; }
+    .top-nav button.active { background: #222; color: #fff; border-color: #222; }
+    .page-section.hidden-page { display: none; }
+    .management-grid { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(520px, 2fr); gap: 16px; align-items: start; }
+    .panel { background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 16px; }
+    .panel h2, .panel h3 { margin-top: 0; }
+    .form-row { margin-bottom: 12px; }
+    .form-note { font-size: 13px; color: #555; line-height: 1.45; margin-top: 8px; }
+    .activation-code-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+    .activation-code-row button { width: auto; min-width: 110px; }
+    .command-box { margin-top: 16px; padding: 14px; border: 1px solid #ccc; border-radius: 8px; background: #fafafa; }
+    .command-grid { display: grid; grid-template-columns: repeat(2, minmax(130px, 1fr)); gap: 8px 14px; font-size: 14px; }
+    .command-grid div { overflow-wrap: anywhere; }
+    .command-status { font-weight: bold; }
+    .command-pending { color: #9a6700; }
+    .command-processing { color: #005cc5; }
+    .command-done { color: #167d2f; }
+    .command-failed { color: #b42318; }
+    .user-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .user-actions button { width: auto; padding: 7px 9px; font-size: 12px; }
+    .btn-primary { background: #222; color: #fff; border-color: #222; }
+    .btn-primary:hover { background: #444; }
+    .btn-danger { border-color: #b42318; color: #b42318; }
+    .btn-danger:hover { background: #fff0f0; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: bold; background: #eee; }
+    .badge-active { background: #e8f7ec; color: #167d2f; }
+    .badge-pending { background: #fff7df; color: #8a6100; }
+    .badge-unknown { background: #eee; color: #555; }
+    .busy-note { margin: 10px 0 0; font-size: 13px; font-weight: bold; color: #9a6700; }
+    @media (max-width: 980px) { .management-grid { grid-template-columns: 1fr; } }
+
+    .login-screen { min-height: calc(100vh - 48px); display: flex; align-items: center; justify-content: center; padding: 20px 0; }
+    .login-card { width: min(430px, 100%); background: #fff; border: 1px solid #ccc; border-radius: 12px; padding: 24px; box-shadow: 0 12px 36px rgba(0,0,0,.10); }
+    .login-card h1 { margin: 0 0 8px; font-size: 24px; text-align: center; }
+    .login-subtitle { margin: 0 0 22px; color: #555; text-align: center; line-height: 1.5; }
+    .login-message { min-height: 22px; margin: 12px 0 0; font-size: 14px; line-height: 1.45; text-align: center; }
+    .login-message.error { color: #b42318; }
+    .login-message.success { color: #167d2f; }
+    .login-button { background: #222; color: #fff; border-color: #222; }
+    .login-button:hover { background: #444; }
+    .login-button:disabled { cursor: wait; opacity: .65; }
+    .app-header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; }
+    .app-header h1 { margin-top: 0; }
+    .admin-session { min-width: 240px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; font-size: 13px; overflow-wrap: anywhere; }
+    .admin-session button { width: auto; min-width: 120px; padding: 8px 12px; }
+    @media (max-width: 700px) {
+      .login-screen { min-height: calc(100vh - 24px); padding: 8px 0; }
+      .login-card { padding: 20px 16px; }
+      .app-header { flex-direction: column; }
+      .admin-session { width: 100%; min-width: 0; align-items: stretch; }
+      .admin-session button { width: 100%; }
+    }
+
+
+    /* ===== GIAO DIỆN DASHBOARD MÀU - THEME V1 ===== */
+    :root {
+      --navy-950: #0b1f36;
+      --navy-900: #102a43;
+      --navy-800: #173f5f;
+      --navy-700: #1f4e78;
+      --teal-600: #0f8f83;
+      --teal-500: #16a394;
+      --teal-100: #dff5f1;
+      --blue-100: #e9f2fb;
+      --green-700: #18794e;
+      --green-100: #e6f6ed;
+      --red-700: #b42318;
+      --red-100: #fdecea;
+      --amber-700: #9a6700;
+      --amber-100: #fff4d6;
+      --violet-700: #6941c6;
+      --violet-100: #f0eaff;
+      --surface: #ffffff;
+      --surface-soft: #f5f8fc;
+      --line: #d9e2ec;
+      --text: #17212b;
+      --muted: #627386;
+      --shadow-sm: 0 4px 16px rgba(16, 42, 67, .07);
+      --shadow-md: 0 14px 34px rgba(16, 42, 67, .12);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 8% 0%, rgba(22, 163, 148, .12), transparent 24rem),
+        radial-gradient(circle at 94% 8%, rgba(31, 78, 120, .10), transparent 28rem),
+        linear-gradient(180deg, #f8fbff 0%, #f2f6fb 100%);
+    }
+
+    #appShell { width: min(1540px, 100%); margin: 0 auto; }
+
+    .app-header {
+      position: relative;
+      overflow: hidden;
+      padding: 22px 24px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 18px;
+      color: #fff;
+      background:
+        linear-gradient(120deg, rgba(11, 31, 54, .98), rgba(31, 78, 120, .96) 58%, rgba(15, 143, 131, .92));
+      box-shadow: var(--shadow-md);
+    }
+    .app-header::after {
+      content: "";
+      position: absolute;
+      width: 260px;
+      height: 260px;
+      right: -90px;
+      top: -145px;
+      border-radius: 50%;
+      border: 42px solid rgba(255,255,255,.07);
+      pointer-events: none;
+    }
+    .brand-block { display: flex; align-items: center; gap: 16px; min-width: 0; position: relative; z-index: 1; }
+    .brand-mark, .login-brand-mark {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      font-weight: 900;
+      letter-spacing: -.04em;
+      color: #fff;
+      background: linear-gradient(145deg, var(--teal-500), #0a746b);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 10px 20px rgba(0,0,0,.16);
+    }
+    .brand-copy { min-width: 0; }
+    .brand-kicker, .login-kicker {
+      margin-bottom: 5px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      color: rgba(255,255,255,.72);
+    }
+    .app-header h1 {
+      margin: 0 0 9px;
+      max-width: 960px;
+      font-size: clamp(22px, 2.3vw, 34px);
+      line-height: 1.15;
+      letter-spacing: -.025em;
+    }
+    .status-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      min-height: 30px;
+      margin: 0;
+      padding: 6px 11px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 999px;
+      color: rgba(255,255,255,.86);
+      background: rgba(255,255,255,.10);
+      backdrop-filter: blur(8px);
+    }
+    .status-line::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #f6c453;
+      box-shadow: 0 0 0 4px rgba(246,196,83,.17);
+    }
+    .status-line.online { color: #effff8; }
+    .status-line.online::before { background: #4ade80; box-shadow: 0 0 0 4px rgba(74,222,128,.18); }
+    .status-line.error { color: #fff1f0; }
+    .status-line.error::before { background: #ff6b6b; box-shadow: 0 0 0 4px rgba(255,107,107,.18); }
+
+    .admin-session {
+      position: relative;
+      z-index: 1;
+      min-width: 280px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 14px;
+      color: rgba(255,255,255,.86);
+      background: rgba(255,255,255,.10);
+      backdrop-filter: blur(10px);
+    }
+    .admin-session b { color: #fff; }
+    #logoutBtn {
+      color: var(--navy-950);
+      border-color: rgba(255,255,255,.7);
+      background: #fff;
+    }
+    #logoutBtn:hover { color: #fff; border-color: var(--teal-500); background: var(--teal-500); }
+
+    .top-nav {
+      padding: 7px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.86);
+      box-shadow: var(--shadow-sm);
+      backdrop-filter: blur(8px);
+    }
+    .top-nav button {
+      position: relative;
+      border: 0;
+      color: var(--navy-700);
+      background: transparent;
+      transition: transform .16s ease, color .16s ease, background .16s ease, box-shadow .16s ease;
+    }
+    .top-nav button:hover { color: var(--navy-900); background: var(--blue-100); transform: translateY(-1px); }
+    .top-nav button.active {
+      color: #fff;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--navy-800), var(--navy-700));
+      box-shadow: 0 8px 18px rgba(31,78,120,.22);
+    }
+    .top-nav button.active::after {
+      content: "";
+      position: absolute;
+      left: 22%;
+      right: 22%;
+      bottom: -7px;
+      height: 3px;
+      border-radius: 99px;
+      background: var(--teal-500);
+    }
+
+    .filter-panel, .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255,255,255,.94);
+      box-shadow: var(--shadow-sm);
+    }
+    .filter-panel {
+      position: relative;
+      overflow: hidden;
+      padding: 20px;
+    }
+    .filter-panel::before, .panel::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--teal-500), var(--navy-700));
+    }
+    .filter-panel h3, .panel h2 {
+      color: var(--navy-900);
+      letter-spacing: -.015em;
+    }
+
+    label { color: var(--navy-900); }
+    input, select {
+      color: var(--text);
+      border-color: #b9c7d5;
+      background: #fff;
+      transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+    input:hover, select:hover { border-color: #8fa7bd; }
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--teal-500);
+      box-shadow: 0 0 0 4px rgba(22,163,148,.14);
+      background: #fff;
+    }
+
+    button {
+      transition: transform .16s ease, background .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button:disabled { transform: none; }
+
+    #applyFilterBtn, #exportFileBtn, .btn-primary {
+      color: #fff;
+      border-color: var(--navy-700);
+      background: linear-gradient(135deg, var(--navy-800), var(--navy-700));
+      box-shadow: 0 7px 16px rgba(31,78,120,.16);
+    }
+    #applyFilterBtn:hover, .btn-primary:hover { border-color: var(--teal-600); background: linear-gradient(135deg, var(--teal-600), var(--teal-500)); }
+    #exportFileBtn { border-color: var(--teal-600); background: linear-gradient(135deg, var(--teal-600), var(--teal-500)); }
+    #exportFileBtn:hover { border-color: #08776e; background: linear-gradient(135deg, #08776e, var(--teal-600)); }
+    #clearFilterBtn {
+      color: var(--navy-700);
+      border-color: #c7d2de;
+      background: #f8fafc;
+    }
+    #clearFilterBtn:hover { background: var(--blue-100); border-color: #9bb2c8; }
+
+    .summary-cards {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(150px, 1fr));
+      gap: 12px;
+      margin: 18px 0 8px;
+    }
+    .summary-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 108px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+    .summary-card::after {
+      content: "";
+      position: absolute;
+      width: 70px;
+      height: 70px;
+      right: -24px;
+      bottom: -26px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: .08;
+    }
+    .summary-card .summary-label {
+      display: block;
+      margin-bottom: 12px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .07em;
+      color: var(--muted);
+    }
+    .summary-card strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1;
+      color: currentColor;
+    }
+    .summary-total { color: var(--navy-700); border-top: 4px solid var(--navy-700); }
+    .summary-in { color: var(--green-700); border-top: 4px solid var(--green-700); }
+    .summary-out { color: var(--red-700); border-top: 4px solid var(--red-700); }
+    .summary-inside { color: var(--teal-600); border-top: 4px solid var(--teal-600); }
+    .summary-users { color: var(--violet-700); border-top: 4px solid var(--violet-700); }
+
+    h2 {
+      position: relative;
+      padding-left: 14px;
+      color: var(--navy-900);
+      letter-spacing: -.018em;
+    }
+    h2::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: .18em;
+      bottom: .18em;
+      width: 5px;
+      border-radius: 99px;
+      background: linear-gradient(180deg, var(--teal-500), var(--navy-700));
+    }
+
+    .table-wrap {
+      overflow: hidden;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    table { background: #fff; }
+    th, td { border-color: #dbe4ed; }
+    th {
+      color: #fff;
+      border-color: rgba(255,255,255,.14);
+      background: linear-gradient(180deg, var(--navy-800), var(--navy-700));
+    }
+    tbody tr:nth-child(even) { background: #f7fafc; }
+    tbody tr { transition: background .15s ease, box-shadow .15s ease; }
+    tbody tr:hover { background: #eaf6f4; box-shadow: inset 4px 0 0 var(--teal-500); }
+
+    .state-badge, .action-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: fit-content;
+      padding: 5px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .state-badge::before, .action-badge::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .state-inside, .action-vao { color: var(--green-700); background: var(--green-100); }
+    .state-outside, .action-ra { color: var(--red-700); background: var(--red-100); }
+    .state-unknown, .action-access, .action- { color: var(--amber-700); background: var(--amber-100); }
+
+    .badge { border: 1px solid transparent; }
+    .badge-active { border-color: #b7e4ca; }
+    .badge-pending { border-color: #f2d48c; }
+    .badge-unknown { border-color: #d6dde5; }
+
+    .command-box {
+      border-color: #c7d8e8;
+      background: linear-gradient(180deg, #f8fbff, #f2f7fb);
+    }
+    .activation-code-row input {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      color: var(--navy-900);
+      background: var(--teal-100);
+    }
+    #generateActivationCodeBtn {
+      color: var(--teal-600);
+      border-color: var(--teal-500);
+      background: #fff;
+    }
+    #generateActivationCodeBtn:hover { color: #fff; background: var(--teal-500); }
+    .btn-danger { background: #fff; }
+    .btn-danger:hover { color: #fff; border-color: var(--red-700); background: var(--red-700); }
+
+    .login-screen {
+      min-height: calc(100vh - 48px);
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(22,163,148,.22), transparent 22rem),
+        radial-gradient(circle at 90% 80%, rgba(31,78,120,.20), transparent 26rem);
+    }
+    .login-card {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(31,78,120,.18);
+      border-top: 5px solid var(--teal-500);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 24px 60px rgba(16,42,67,.18);
+    }
+    .login-card::after {
+      content: "";
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      right: -76px;
+      top: -78px;
+      border: 28px solid rgba(22,163,148,.08);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .login-brand-mark {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 12px;
+      font-size: 19px;
+    }
+    .login-kicker {
+      text-align: center;
+      color: var(--teal-600);
+    }
+    .login-card h1 { color: var(--navy-900); letter-spacing: -.025em; }
+    .login-subtitle { color: var(--muted); }
+    .login-button {
+      border-color: var(--navy-700);
+      background: linear-gradient(135deg, var(--navy-800), var(--navy-700));
+      box-shadow: 0 10px 22px rgba(31,78,120,.20);
+    }
+    .login-button:hover { border-color: var(--teal-600); background: linear-gradient(135deg, var(--teal-600), var(--teal-500)); }
+
+    /* Giữ phần xuất PDF đen trắng như bản cũ */
+    .pdf-report {
+      border: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: #fff !important;
+      color: #111 !important;
+    }
+    .pdf-report table { background: #fff !important; box-shadow: none !important; }
+    .pdf-report th {
+      color: #111 !important;
+      border: 1px solid #ccc !important;
+      background: #eee !important;
+    }
+    .pdf-report td { color: #111 !important; border: 1px solid #ccc !important; background: transparent !important; }
+    .pdf-report tbody tr:nth-child(even) { background: #fafafa !important; }
+    .pdf-report tbody tr:hover { background: inherit !important; box-shadow: none !important; }
+
+    @media (max-width: 1100px) {
+      .summary-cards { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+    }
+    @media (max-width: 700px) {
+      body { padding: 12px; margin: 0; }
+      .app-header { padding: 18px; border-radius: 15px; }
+      .brand-block { align-items: flex-start; }
+      .brand-mark { width: 48px; height: 48px; border-radius: 13px; }
+      .admin-session { padding: 11px; }
+      .top-nav { border-radius: 12px; }
+      .top-nav button { width: 100%; min-width: 0; }
+      .summary-cards { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+      .summary-card { min-height: 96px; }
+      .filter-panel, .panel { border-radius: 13px; }
+    }
+    @media (max-width: 430px) {
+      .summary-cards { grid-template-columns: 1fr; }
+      .brand-mark { display: none; }
+    }
+
+  
+    /* ===== GIAO DIỆN TƯƠI SÁNG, BO TRÒN - THEME V2 ===== */
+    :root {
+      --fresh-blue: #1677ff;
+      --fresh-blue-dark: #075dcc;
+      --fresh-cyan: #13b8cf;
+      --fresh-mint: #20c997;
+      --fresh-green: #18a866;
+      --fresh-red: #e5484d;
+      --fresh-amber: #f5a524;
+      --fresh-violet: #7b61ff;
+      --fresh-ink: #11213a;
+      --fresh-muted: #62748b;
+      --fresh-line: #dce7f3;
+      --fresh-bg: #f3f8ff;
+      --fresh-shadow: 0 16px 40px rgba(31, 91, 153, .12);
+      --fresh-shadow-soft: 0 8px 24px rgba(31, 91, 153, .09);
+    }
+
+    body {
+      color: var(--fresh-ink);
+      background:
+        radial-gradient(circle at 5% 3%, rgba(22,119,255,.13), transparent 25rem),
+        radial-gradient(circle at 96% 5%, rgba(32,201,151,.13), transparent 27rem),
+        linear-gradient(180deg, #f9fcff 0%, var(--fresh-bg) 46%, #eef6ff 100%);
+    }
+
+    #appShell { width: min(1600px, 100%); }
+
+    .app-header {
+      padding: 28px 30px;
+      border: 0;
+      border-radius: 28px;
+      background: linear-gradient(118deg, #146be8 0%, #12a7c5 52%, #20c997 100%);
+      box-shadow: 0 24px 55px rgba(17, 91, 173, .22);
+    }
+    .app-header::before {
+      content: "";
+      position: absolute;
+      width: 330px;
+      height: 330px;
+      left: 45%;
+      bottom: -270px;
+      border: 55px solid rgba(255,255,255,.08);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .app-header::after {
+      width: 310px;
+      height: 310px;
+      right: -104px;
+      top: -178px;
+      border: 48px solid rgba(255,255,255,.10);
+    }
+
+    .brand-block { gap: 18px; }
+    .brand-mark, .login-brand-mark {
+      width: 64px;
+      height: 64px;
+      border: 1px solid rgba(255,255,255,.35);
+      border-radius: 21px;
+      color: #0862ca;
+      background: linear-gradient(145deg, rgba(255,255,255,.98), rgba(226,251,247,.92));
+      box-shadow: 0 14px 30px rgba(0,67,132,.18);
+    }
+    .brand-kicker {
+      margin-bottom: 7px;
+      font-size: 12px;
+      letter-spacing: .10em;
+      color: rgba(255,255,255,.86);
+    }
+    .app-header h1 {
+      margin-bottom: 12px;
+      font-size: clamp(28px, 3vw, 42px);
+      letter-spacing: -.035em;
+    }
+
+    .status-line {
+      min-height: 34px;
+      padding: 7px 13px;
+      border-color: rgba(255,255,255,.28);
+      background: rgba(255,255,255,.15);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.18);
+    }
+
+    .admin-session {
+      min-width: 270px;
+      padding: 14px;
+      border-color: rgba(255,255,255,.30);
+      border-radius: 20px;
+      background: rgba(255,255,255,.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+    }
+    .admin-session span {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .admin-session b {
+      padding: 5px 10px;
+      border-radius: 999px;
+      color: var(--fresh-blue-dark);
+      background: #fff;
+      box-shadow: 0 5px 15px rgba(0,80,160,.13);
+    }
+    #logoutBtn {
+      border: 0;
+      border-radius: 13px;
+      color: var(--fresh-blue-dark);
+      background: #fff;
+      box-shadow: 0 8px 20px rgba(0,75,150,.14);
+    }
+    #logoutBtn:hover {
+      color: #fff;
+      background: linear-gradient(135deg, var(--fresh-blue), var(--fresh-cyan));
+    }
+
+    .top-nav {
+      gap: 8px;
+      padding: 8px;
+      border-color: rgba(203,220,238,.95);
+      border-radius: 20px;
+      background: rgba(255,255,255,.92);
+      box-shadow: var(--fresh-shadow-soft);
+    }
+    .top-nav button {
+      min-width: 210px;
+      padding: 13px 21px;
+      border-radius: 14px;
+    }
+    .top-nav button:hover {
+      color: var(--fresh-blue-dark);
+      background: #eaf4ff;
+    }
+    .top-nav button.active {
+      background: linear-gradient(135deg, var(--fresh-blue), var(--fresh-cyan));
+      box-shadow: 0 10px 22px rgba(22,119,255,.24);
+    }
+    .top-nav button.active::after {
+      display: none;
+    }
+
+    .filter-panel, .panel {
+      border-color: var(--fresh-line);
+      border-radius: 24px;
+      box-shadow: var(--fresh-shadow-soft);
+    }
+    .filter-panel {
+      padding: 22px;
+    }
+    .filter-panel::before, .panel::before {
+      left: 20px;
+      right: 20px;
+      top: 0;
+      bottom: auto;
+      width: auto;
+      height: 5px;
+      border-radius: 0 0 999px 999px;
+      background: linear-gradient(90deg, var(--fresh-blue), var(--fresh-cyan), var(--fresh-mint));
+    }
+    .filter-grid {
+      gap: 14px;
+    }
+    .filter-grid > div {
+      padding: 12px;
+      border: 1px solid #e2ecf7;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #fbfdff, #f5faff);
+    }
+    label { color: #203653; }
+
+    input, select, button {
+      border-radius: 12px;
+    }
+    input, select {
+      min-height: 44px;
+      border-color: #c5d5e6;
+    }
+    input:focus, select:focus {
+      border-color: var(--fresh-blue);
+      box-shadow: 0 0 0 4px rgba(22,119,255,.12);
+    }
+
+    #applyFilterBtn, #exportFileBtn, .btn-primary, .login-button {
+      border: 0;
+      background: linear-gradient(135deg, var(--fresh-blue), var(--fresh-cyan));
+      box-shadow: 0 10px 22px rgba(22,119,255,.20);
+    }
+    #applyFilterBtn:hover, #exportFileBtn:hover, .btn-primary:hover, .login-button:hover {
+      background: linear-gradient(135deg, var(--fresh-blue-dark), var(--fresh-mint));
+    }
+    #clearFilterBtn {
+      border-color: #d5e2ef;
+      background: #f6f9fd;
+    }
+    #clearFilterBtn:hover {
+      color: var(--fresh-blue-dark);
+      border-color: #b9d2eb;
+      background: #eaf4ff;
+    }
+
+    .summary-cards {
+      gap: 16px;
+      margin: 22px 0 10px;
+    }
+    .summary-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 122px;
+      padding: 18px;
+      border: 0;
+      border-radius: 22px;
+      box-shadow: var(--fresh-shadow-soft);
+      transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .summary-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--fresh-shadow);
+    }
+    .summary-card::after {
+      width: 104px;
+      height: 104px;
+      right: -48px;
+      bottom: -55px;
+      opacity: .10;
+    }
+    .summary-icon {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      font-size: 22px;
+      font-weight: 900;
+      color: currentColor;
+      background: rgba(255,255,255,.80);
+      box-shadow: 0 8px 18px rgba(28,81,135,.10);
+    }
+    .summary-card .summary-label {
+      margin-bottom: 9px;
+      color: #5f7187;
+    }
+    .summary-card strong {
+      font-size: 31px;
+    }
+    .summary-total {
+      color: #126de0;
+      border-top: 0;
+      background: linear-gradient(135deg, #e8f3ff, #f7fbff);
+    }
+    .summary-in {
+      color: #139f68;
+      border-top: 0;
+      background: linear-gradient(135deg, #e4f9ef, #f8fffb);
+    }
+    .summary-out {
+      color: #df3e55;
+      border-top: 0;
+      background: linear-gradient(135deg, #ffebef, #fff9fa);
+    }
+    .summary-inside {
+      color: #0aa9bd;
+      border-top: 0;
+      background: linear-gradient(135deg, #e3f9fc, #f8feff);
+    }
+    .summary-users {
+      color: #7657e8;
+      border-top: 0;
+      background: linear-gradient(135deg, #eee9ff, #fbfaff);
+    }
+
+    h2 {
+      padding-left: 16px;
+      color: var(--fresh-ink);
+    }
+    h2::before {
+      width: 6px;
+      background: linear-gradient(180deg, var(--fresh-blue), var(--fresh-mint));
+    }
+
+    .table-wrap {
+      border-color: var(--fresh-line);
+      border-radius: 20px;
+      box-shadow: var(--fresh-shadow-soft);
+    }
+    th {
+      border-color: rgba(255,255,255,.18);
+      background: linear-gradient(180deg, #1677ff, #0f6fdd);
+    }
+    td {
+      border-color: #e0e9f2;
+    }
+    tbody tr:nth-child(even) {
+      background: #f8fbff;
+    }
+    tbody tr:hover {
+      background: #e9f8f5;
+      box-shadow: inset 5px 0 0 var(--fresh-mint);
+    }
+
+    .state-badge, .action-badge, .badge {
+      border-radius: 999px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+    }
+
+    .panel {
+      padding: 20px;
+    }
+    .command-box {
+      border-radius: 18px;
+      background: linear-gradient(180deg, #f8fcff, #eef7ff);
+    }
+    .activation-code-row input {
+      border-color: #a9ddda;
+      border-radius: 13px;
+      background: linear-gradient(180deg, #e5fbf7, #f5fffd);
+    }
+    #generateActivationCodeBtn {
+      border-radius: 12px;
+      color: #087f74;
+      border-color: #79d5ca;
+      background: #effbf8;
+    }
+    #generateActivationCodeBtn:hover {
+      color: #fff;
+      background: linear-gradient(135deg, var(--fresh-cyan), var(--fresh-mint));
+    }
+
+    .login-screen {
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at 16% 13%, rgba(22,119,255,.24), transparent 24rem),
+        radial-gradient(circle at 88% 82%, rgba(32,201,151,.23), transparent 25rem),
+        linear-gradient(145deg, #f6fbff, #eef8ff 55%, #f0fff9);
+    }
+    .login-card {
+      overflow: hidden;
+      padding: 30px;
+      border: 0;
+      border-radius: 28px;
+      box-shadow: 0 28px 70px rgba(26,90,153,.19);
+    }
+    .login-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 7px;
+      background: linear-gradient(90deg, var(--fresh-blue), var(--fresh-cyan), var(--fresh-mint));
+    }
+    .login-card::after {
+      border-color: rgba(22,119,255,.07);
+    }
+    .login-brand-mark {
+      color: #fff;
+      background: linear-gradient(145deg, var(--fresh-blue), var(--fresh-mint));
+    }
+    .login-kicker {
+      color: var(--fresh-blue);
+      letter-spacing: .10em;
+    }
+
+    /* Phần xuất PDF vẫn giữ đen trắng như bản trước */
+    .pdf-report {
+      border: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: #fff !important;
+      color: #111 !important;
+    }
+    .pdf-report h1, .pdf-report h2 {
+      padding-left: 0 !important;
+      color: #111 !important;
+    }
+    .pdf-report h2::before {
+      display: none !important;
+    }
+    .pdf-report table {
+      border-radius: 0 !important;
+      background: #fff !important;
+      box-shadow: none !important;
+    }
+    .pdf-report th {
+      color: #111 !important;
+      border: 1px solid #ccc !important;
+      background: #eee !important;
+    }
+    .pdf-report td {
+      color: #111 !important;
+      border: 1px solid #ccc !important;
+      background: transparent !important;
+    }
+    .pdf-report tbody tr:nth-child(even) {
+      background: #fafafa !important;
+    }
+    .pdf-report tbody tr:hover {
+      background: inherit !important;
+      box-shadow: none !important;
+    }
+
+    @media (max-width: 700px) {
+      .app-header {
+        padding: 22px 18px;
+        border-radius: 22px;
+      }
+      .app-header h1 {
+        font-size: 27px;
+      }
+      .brand-mark {
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+      }
+      .admin-session span {
+        justify-content: flex-start;
+      }
+      .filter-panel, .panel {
+        border-radius: 19px;
+      }
+      .filter-grid > div {
+        padding: 10px;
+        border-radius: 14px;
+      }
+      .summary-card {
+        border-radius: 19px;
+      }
+    }
+
+  
+    /* ===== TINH CHỈNH GIAO DIỆN CHỐT - THEME V3 ===== */
+    .building-icon {
+      display: block;
+      width: 82%;
+      height: 82%;
+      overflow: visible;
+      filter: drop-shadow(0 5px 8px rgba(7, 93, 204, .18));
+    }
+
+    .brand-mark,
+    .login-brand-mark {
+      color: inherit;
+      background: linear-gradient(145deg, #ffffff 0%, #eaf8ff 58%, #e8fff7 100%);
+    }
+
+    .brand-mark {
+      width: 70px;
+      height: 70px;
+      border-radius: 22px;
+    }
+
+    .login-brand-mark {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 18px;
+      border-radius: 27px;
+    }
+
+    .login-card {
+      width: min(570px, 100%);
+      padding: 34px 36px 32px;
+    }
+
+    .login-main-title {
+      max-width: 510px;
+      margin: 0 auto 30px !important;
+      color: var(--fresh-blue-dark) !important;
+      font-size: clamp(24px, 3vw, 31px) !important;
+      line-height: 1.22;
+      letter-spacing: -.025em;
+      text-align: center;
+    }
+
+    .login-card .form-row {
+      margin-bottom: 16px;
+    }
+
+    .login-card label {
+      font-size: 16px;
+    }
+
+    .login-card input {
+      min-height: 52px;
+      font-size: 16px;
+    }
+
+    .login-button {
+      min-height: 48px;
+      margin-top: 2px;
+      font-size: 16px;
+    }
+
+    .app-header h1 {
+      margin: 0 0 13px;
+      max-width: 1100px;
+      font-size: clamp(27px, 3.1vw, 43px);
+      line-height: 1.14;
+    }
+
+    .summary-card {
+      display: block;
+      min-height: 116px;
+      padding: 21px 22px;
+    }
+
+    .summary-card .summary-label {
+      margin-bottom: 13px;
+      font-size: 12px;
+    }
+
+    .summary-card strong {
+      font-size: 33px;
+    }
+
+    .activation-code-row input::placeholder {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .045em;
+      color: #718198;
+      opacity: 1;
+    }
+
+    .command-box {
+      padding: 18px;
+    }
+
+    .command-box-title {
+      margin-bottom: 15px;
+      color: var(--fresh-ink);
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: .055em;
+    }
+
+    .command-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 16px;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .command-column {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .command-row {
+      display: flex;
+      align-items: baseline;
+      min-width: 0;
+      gap: 3px;
+    }
+
+    .command-label {
+      flex: 0 0 auto;
+      color: #203653;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .command-value {
+      min-width: 0;
+      color: var(--fresh-ink);
+      font-weight: 400;
+      overflow-wrap: break-word;
+      word-break: normal;
+    }
+
+    .command-status {
+      display: inline;
+      padding: 0;
+      border-radius: 0;
+      font-weight: 700;
+      white-space: normal;
+      background: transparent !important;
+    }
+
+    .command-pending {
+      color: #926100;
+      background: #fff3ce;
+    }
+
+    .command-processing {
+      color: #075dcc;
+      background: #e8f3ff;
+    }
+
+    .command-done {
+      color: #128152;
+      background: #e4f8ed;
+    }
+
+    .command-failed {
+      color: #c72f42;
+      background: #ffe9ed;
+    }
+
+    @media (max-width: 700px) {
+      .login-card {
+        padding: 28px 20px 25px;
+      }
+
+      .login-brand-mark {
+        width: 78px;
+        height: 78px;
+        border-radius: 23px;
+      }
+
+      .login-main-title {
+        margin-bottom: 25px !important;
+        font-size: 24px !important;
+      }
+
+      .brand-mark {
+        width: 58px;
+        height: 58px;
+        border-radius: 19px;
+      }
+
+      .app-header h1 {
+        font-size: 27px;
+      }
+
+      .command-grid {
+        grid-template-columns: 1fr;
+        gap: 7px;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .brand-mark {
+        display: grid;
+      }
+
+    }
+
+
+    /* ===== BỐ CỤC QUẢN LÝ NGƯỜI DÙNG + LOGO TỔNG QUÁT - THEME V5 ===== */
+    .access-control-icon {
+      display: block;
+      width: 84%;
+      height: 84%;
+      overflow: visible;
+      filter: drop-shadow(0 6px 9px rgba(7, 93, 204, .18));
+    }
+
+    .management-stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .management-composer-panel {
+      padding: 22px;
+    }
+
+    .management-top-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.58fr) minmax(390px, .92fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .management-subsection {
+      min-width: 0;
+      padding: 18px;
+      border: 1px solid #e0eaf4;
+      border-radius: 19px;
+      background: linear-gradient(180deg, #fcfeff 0%, #f5faff 100%);
+    }
+
+    .management-subsection h2,
+    .user-list-panel h2 {
+      margin: 0 0 15px;
+    }
+
+    .add-user-form-grid {
+      display: grid;
+      grid-template-columns: minmax(125px, .8fr) minmax(205px, 1.45fr) minmax(110px, .68fr) minmax(125px, .78fr);
+      gap: 13px 14px;
+      align-items: end;
+    }
+
+    .add-user-form-grid .form-row {
+      min-width: 0;
+      margin: 0;
+    }
+
+    .add-user-form-grid label {
+      min-height: 19px;
+      margin-bottom: 6px;
+    }
+
+    .activation-form-row {
+      grid-column: 1 / -1;
+    }
+
+    .activation-code-row {
+      grid-template-columns: minmax(0, 1fr) 128px;
+    }
+
+    .activation-code-row button {
+      width: 128px;
+      min-width: 128px;
+    }
+
+    .add-user-submit {
+      grid-column: 1 / -1;
+      min-height: 44px;
+    }
+
+    .processing-area {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .processing-area .command-box {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 0;
+      margin: 0;
+      padding: 18px;
+    }
+
+    .processing-area .command-grid {
+      width: 100%;
+      gap: 11px 18px;
+    }
+
+    .processing-area .command-column {
+      gap: 10px;
+    }
+
+    .processing-area .command-row {
+      gap: 5px;
+    }
+
+    .user-list-panel {
+      padding: 20px;
+    }
+
+    #managementPage .table-wrap {
+      width: 100%;
+    }
+
+    #managementPage table {
+      min-width: 1040px;
+    }
+
+    @media (max-width: 1180px) {
+      .management-top-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .add-user-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 700px) {
+      .management-composer-panel,
+      .user-list-panel {
+        padding: 15px;
+      }
+
+      .management-subsection {
+        padding: 15px;
+        border-radius: 16px;
+      }
+
+      .add-user-form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .activation-form-row,
+      .add-user-submit {
+        grid-column: auto;
+      }
+
+      .activation-code-row {
+        grid-template-columns: minmax(0, 1fr) 110px;
+      }
+
+      .activation-code-row button {
+        width: 110px;
+        min-width: 110px;
+      }
+
+      .processing-area .command-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <section id="loginScreen" class="login-screen">
+    <form id="loginForm" class="login-card" autocomplete="on">
+      <div class="login-brand-mark"><svg class="access-control-icon" viewBox="0 0 64 64" role="img" aria-label="Biểu tượng kiểm soát ra vào an toàn">
+          <path d="M32 5.5L53 13v15.3c0 13.2-8.2 24.1-21 29.7C19.2 52.4 11 41.5 11 28.3V13L32 5.5Z" fill="#EAF4FF" stroke="#1677FF" stroke-width="3.2" stroke-linejoin="round"/>
+          <rect x="20.5" y="16.5" width="23" height="31.5" rx="3.5" fill="#FFFFFF" stroke="#075DCC" stroke-width="3"/>
+          <rect x="25.5" y="21.5" width="13.5" height="23.5" rx="2.2" fill="#13B8CF"/>
+          <circle cx="35.2" cy="34.2" r="1.7" fill="#FFFFFF"/>
+          <path d="M17.5 49.5H42.5" stroke="#075DCC" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="45.5" cy="44.5" r="9.5" fill="#20C997" stroke="#FFFFFF" stroke-width="2.8"/>
+          <path d="M41.2 44.6L44.2 47.5L50.2 40.9" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg></div>
+      <h1 class="login-main-title">HỆ THỐNG KIỂM SOÁT RA VÀO</h1>
+      <div class="form-row">
+        <label for="loginEmail">Email</label>
+        <input id="loginEmail" type="email" autocomplete="username" inputmode="email" required placeholder="Nhập email">
+      </div>
+      <div class="form-row">
+        <label for="loginPassword">Mật khẩu</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="Nhập mật khẩu">
+      </div>
+      <button id="loginBtn" class="login-button" type="submit">ĐĂNG NHẬP</button>
+      <div id="loginMessage" class="login-message" role="status" aria-live="polite"></div>
+    </form>
+  </section>
+
+  <div id="appShell" class="hidden">
+    <header class="app-header">
+      <div class="brand-block">
+        <div class="brand-mark"><svg class="access-control-icon" viewBox="0 0 64 64" role="img" aria-label="Biểu tượng kiểm soát ra vào an toàn">
+          <path d="M32 5.5L53 13v15.3c0 13.2-8.2 24.1-21 29.7C19.2 52.4 11 41.5 11 28.3V13L32 5.5Z" fill="#EAF4FF" stroke="#1677FF" stroke-width="3.2" stroke-linejoin="round"/>
+          <rect x="20.5" y="16.5" width="23" height="31.5" rx="3.5" fill="#FFFFFF" stroke="#075DCC" stroke-width="3"/>
+          <rect x="25.5" y="21.5" width="13.5" height="23.5" rx="2.2" fill="#13B8CF"/>
+          <circle cx="35.2" cy="34.2" r="1.7" fill="#FFFFFF"/>
+          <path d="M17.5 49.5H42.5" stroke="#075DCC" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="45.5" cy="44.5" r="9.5" fill="#20C997" stroke="#FFFFFF" stroke-width="2.8"/>
+          <path d="M41.2 44.6L44.2 47.5L50.2 40.9" fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg></div>
+        <div class="brand-copy">
+          <h1>HỆ THỐNG KIỂM SOÁT RA VÀO</h1>
+          <div id="connectionStatus" class="status-line">Đang chờ kết nối Server...</div>
+        </div>
+      </div>
+      <div class="admin-session">
+        <span>Đang đăng nhập: <b id="adminEmailLabel">--</b></span>
+        <button id="logoutBtn" type="button">ĐĂNG XUẤT</button>
+      </div>
+    </header>
+
+  <div class="top-nav" role="navigation" aria-label="Điều hướng">
+    <button id="showStatisticsBtn" class="active" type="button">THỐNG KÊ LỊCH SỬ</button>
+    <button id="showManagementBtn" type="button">QUẢN LÝ NGƯỜI DÙNG</button>
+  </div>
+
+  <main id="statisticsPage" class="page-section">
+
+  <div class="filter-panel">
+    <h3 style="margin-top:0;">TÌM KIẾM VÀ LỌC DỮ LIỆU</h3>
+    <div class="filter-grid">
+      <div><label for="searchName">Tên người dùng</label><input id="searchName" type="text" placeholder="Nhập tên cần tìm"></div>
+      <div><label for="filterDate">Theo ngày</label><input id="filterDate" type="date"></div>
+      <div><label for="filterMonth">Theo tháng</label><input id="filterMonth" type="month"></div>
+      <div><label for="filterYear">Theo năm</label><input id="filterYear" type="number" min="2025" max="2100" placeholder="Ví dụ: 2026"></div>
+      <div><label for="filterAction">Trạng thái</label><select id="filterAction"><option value="">Tất cả</option><option value="VAO">VÀO</option><option value="RA">RA</option><option value="ACCESS">ACCESS</option></select></div>
+      <div><label for="filterFloor">Theo tầng</label><input id="filterFloor" type="number" min="1" max="99" placeholder="Ví dụ: 2"></div>
+      <div><label for="filterRoom">Theo phòng</label><input id="filterRoom" type="number" min="1" max="9999" placeholder="Ví dụ: 202"></div>
+    </div>
+    <div class="button-row">
+      <button id="applyFilterBtn" type="button">Lọc dữ liệu</button>
+      <button id="clearFilterBtn" type="button">Xóa bộ lọc</button>
+      <div class="export-group">
+        <select id="exportFormat" aria-label="Phương thức xuất file">
+          <option value="excel">Excel</option>
+          <option value="pdf">PDF</option>
+        </select>
+        <button id="exportFileBtn" type="button">Xuất file</button>
+      </div>
+    </div>
+  </div>
+
+  <section id="summaryCards" class="summary-cards hidden" aria-label="Tổng quan dữ liệu đã lọc">
+    <article class="summary-card summary-total"><span class="summary-label">TỔNG BẢN GHI</span><strong id="summaryTotalRecords">0</strong></article>
+    <article class="summary-card summary-in"><span class="summary-label">LƯỢT VÀO</span><strong id="summaryTotalIn">0</strong></article>
+    <article class="summary-card summary-out"><span class="summary-label">LƯỢT RA</span><strong id="summaryTotalOut">0</strong></article>
+    <article class="summary-card summary-inside"><span class="summary-label">ĐANG Ở TRONG</span><strong id="summaryInside">0</strong></article>
+    <article class="summary-card summary-users"><span class="summary-label">NGƯỜI DÙNG</span><strong id="summaryUsers">0</strong></article>
+  </section>
+
+  <section id="userStatsSection" class="hidden">
+    <h2>THỐNG KÊ NGƯỜI DÙNG</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tên</th>
+            <th>Tầng</th>
+            <th>Phòng</th>
+            <th>Số lần vào</th>
+            <th>Số lần ra</th>
+            <th>Tổng số lần ra vào</th>
+            <th>Bản ghi khác</th>
+            <th>Trạng thái hiện tại</th>
+            <th>Lần ra vào gần nhất</th>
+          </tr>
+        </thead>
+        <tbody id="userStats"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <h2>LỊCH SỬ RA VÀO</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>STT</th><th>Tên</th><th>Trạng thái</th><th>Tầng</th><th>Phòng</th><th>Thời gian</th><th>Ngày</th></tr>
+      </thead>
+      <tbody id="logTable"></tbody>
+    </table>
+  </div>
+
+
+  </main>
+
+  <main id="managementPage" class="page-section hidden-page">
+    <div class="management-stack">
+      <section class="panel management-composer-panel">
+        <div class="management-top-grid">
+          <div class="management-subsection add-user-area">
+            <h2>THÊM NGƯỜI DÙNG</h2>
+            <div class="add-user-form-grid">
+              <div class="form-row"><label for="newUserId">NHẬP USER_ID</label><input id="newUserId" type="number" min="1" max="150" placeholder="Nhập từ 1 đến 150"></div>
+              <div class="form-row"><label for="newUserName">Tên người dùng</label><input id="newUserName" type="text" maxlength="12" placeholder="Nhập tối đa 12 ký tự không dấu"></div>
+              <div class="form-row"><label for="newUserFloor">Số tầng</label><input id="newUserFloor" type="number" min="1" max="99" placeholder="Ví dụ: 2"></div>
+              <div class="form-row"><label for="newUserRoom">Số phòng</label><input id="newUserRoom" type="number" min="1" max="9999" placeholder="Ví dụ: 202"></div>
+              <div class="form-row activation-form-row">
+                <label for="newUserActivationCode">Mã kích hoạt một lần</label>
+                <div class="activation-code-row">
+                  <input id="newUserActivationCode" type="text" maxlength="6" inputmode="numeric" readonly placeholder="NHẤN TẠO MÃ">
+                  <button id="generateActivationCodeBtn" type="button">TẠO MÃ</button>
+                </div>
+              </div>
+              <button id="addUserBtn" class="btn-primary add-user-submit" type="button">THÊM NGƯỜI DÙNG</button>
+            </div>
+          </div>
+
+          <div class="management-subsection processing-area">
+            <h2>THÔNG TIN XỬ LÝ</h2>
+            <div class="command-box">
+              <div id="commandSummary" class="command-grid">
+                <div class="command-column">
+                  <div class="command-row"><span class="command-label">Thao tác:</span><span class="command-value">--</span></div>
+                  <div class="command-row"><span class="command-label">USER_ID:</span><span class="command-value">--</span></div>
+                  <div class="command-row"><span class="command-label">Tên:</span><span class="command-value">--</span></div>
+                  <div class="command-row"><span class="command-label">Tầng:</span><span class="command-value">--</span></div>
+                </div>
+                <div class="command-column">
+                  <div class="command-row"><span class="command-label">Phòng:</span><span class="command-value">--</span></div>
+                  <div class="command-row"><span class="command-label">Mã kích hoạt:</span><span class="command-value">--</span></div>
+                  <div class="command-row"><span class="command-label">Trạng thái:</span><span class="command-value">--</span></div>
+                  <div class="command-row"><span class="command-label">Kết quả:</span><span class="command-value">--</span></div>
+                </div>
+              </div>
+              <div id="commandBusyNote" class="busy-note hidden">Thiết bị đang xử lý lệnh, vui lòng chờ...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel user-list-panel">
+        <h2>DANH SÁCH NGƯỜI DÙNG</h2>
+        <div class="table-wrap"><table><thead><tr><th>USER_ID</th><th>Tên</th><th>Tầng</th><th>Phòng</th><th>Trạng thái</th><th>Mã kích hoạt</th><th>ID vân tay thường</th><th>ID vân tay khẩn cấp</th><th>Thao tác</th></tr></thead><tbody id="residentTable"><tr><td colspan="9" class="empty">Đang đọc dữ liệu người dùng...</td></tr></tbody></table></div>
+      </section>
+    </div>
+  </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+    import { getDatabase, ref, onValue, get, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAaJYnxuFUZSpALzzLHWIB4GCBHkL7HP_k",
+      authDomain: "hethongkiemsoatravaochungcu.firebaseapp.com",
+      projectId: "hethongkiemsoatravaochungcu",
+      databaseURL: "https://hethongkiemsoatravaochungcu-default-rtdb.asia-southeast1.firebasedatabase.app",
+      storageBucket: "hethongkiemsoatravaochungcu.firebasestorage.app",
+      messagingSenderId: "542422326081",
+      appId: "1:542422326081:web:2245cd4b517c7c338edfc0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const logsRef = ref(db, "access_logs");
+    const usersRef = ref(db, "users");
+    const commandRef = ref(db, "device_commands/stm32_01");
+    const commandCounterRef = ref(db, "system/last_command_number");
+    const auth = getAuth(app);
+    const ADMIN_UID = "cp4JVs9RqEYgz7x97g2AAXDkXxI3";
+    const MAX_USERS = 150;
+    let usersData = {};
+    let currentCommand = {};
+    let allLogs = [];
+    let filteredLogs = [];
+    let filterApplied = false;
+    let databaseUnsubscribers = [];
+    let databaseListenersStarted = false;
+
+    const loginScreen = document.getElementById("loginScreen");
+    const loginForm = document.getElementById("loginForm");
+    const loginEmail = document.getElementById("loginEmail");
+    const loginPassword = document.getElementById("loginPassword");
+    const loginBtn = document.getElementById("loginBtn");
+    const loginMessage = document.getElementById("loginMessage");
+    const appShell = document.getElementById("appShell");
+    const adminEmailLabel = document.getElementById("adminEmailLabel");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const connectionStatus = document.getElementById("connectionStatus");
+    const searchName = document.getElementById("searchName");
+    const filterDate = document.getElementById("filterDate");
+    const filterMonth = document.getElementById("filterMonth");
+    const filterYear = document.getElementById("filterYear");
+    const filterAction = document.getElementById("filterAction");
+    const filterFloor = document.getElementById("filterFloor");
+    const filterRoom = document.getElementById("filterRoom");
+    const userStatsSection = document.getElementById("userStatsSection");
+    const summaryCards = document.getElementById("summaryCards");
+    const summaryTotalRecords = document.getElementById("summaryTotalRecords");
+    const summaryTotalIn = document.getElementById("summaryTotalIn");
+    const summaryTotalOut = document.getElementById("summaryTotalOut");
+    const summaryInside = document.getElementById("summaryInside");
+    const summaryUsers = document.getElementById("summaryUsers");
+    const statisticsPage = document.getElementById("statisticsPage");
+    const managementPage = document.getElementById("managementPage");
+    const showStatisticsBtn = document.getElementById("showStatisticsBtn");
+    const showManagementBtn = document.getElementById("showManagementBtn");
+    const residentTable = document.getElementById("residentTable");
+    const newUserId = document.getElementById("newUserId");
+    const newUserName = document.getElementById("newUserName");
+    const newUserFloor = document.getElementById("newUserFloor");
+    const newUserRoom = document.getElementById("newUserRoom");
+    const newUserActivationCode = document.getElementById("newUserActivationCode");
+    const generateActivationCodeBtn = document.getElementById("generateActivationCodeBtn");
+    const addUserBtn = document.getElementById("addUserBtn");
+    const commandSummary = document.getElementById("commandSummary");
+    const commandBusyNote = document.getElementById("commandBusyNote");
+
+    function normalizeText(value) {
+      return String(value || "").trim().toUpperCase();
+    }
+
+    function translateCommandType(type) {
+      const value = normalizeText(type);
+      const labels = {
+        USER_ADD: "THÊM NGƯỜI DÙNG",
+        USER_DELETE: "XÓA NGƯỜI DÙNG"
+      };
+      return labels[value] || value || "--";
+    }
+
+    function translateCommandStatus(status) {
+      const value = normalizeText(status);
+      const labels = {
+        PENDING: "ĐANG CHỜ",
+        PROCESSING: "ĐANG XỬ LÝ",
+        DONE: "HOÀN TẤT",
+        FAILED: "THẤT BẠI"
+      };
+      return labels[value] || value || "--";
+    }
+
+    function translateCommandResult(result) {
+      const value = normalizeText(result);
+      const labels = {
+        OK: "THÀNH CÔNG",
+        USER_EXISTS: "USER_ID ĐÃ TỒN TẠI",
+        INVALID_NAME: "TÊN KHÔNG HỢP LỆ",
+        INVALID_USER: "USER_ID KHÔNG HỢP LỆ",
+        STALE: "LỆNH ĐÃ ĐƯỢC XỬ LÝ",
+        STALE_SYNCED: "ĐÃ ĐỒNG BỘ LỆNH CŨ",
+        BAD_FORMAT: "SAI ĐỊNH DẠNG LỆNH",
+        MISSING_LOCATION: "THIẾU THÔNG TIN VỊ TRÍ",
+        INVALID_FLOOR: "TẦNG KHÔNG HỢP LỆ",
+        INVALID_ROOM: "PHÒNG KHÔNG HỢP LỆ",
+        INVALID_ACTIVATION_CODE: "MÃ KÍCH HOẠT KHÔNG HỢP LỆ",
+        AS608_OFFLINE: "CẢM BIẾN VÂN TAY MẤT KẾT NỐI",
+        "DELETE FAIL": "XÓA DỮ LIỆU THẤT BẠI",
+        "STORAGE ERROR": "LỖI LƯU TRỮ",
+        "PROFILE WRITE ERROR": "LỖI LƯU HỒ SƠ",
+        "CARD WRITE ERROR": "LỖI LƯU THẺ",
+        "COUNT WRITE ERROR": "LỖI LƯU SỐ LƯỢNG NGƯỜI DÙNG",
+        UNKNOWN_COMMAND: "LỆNH KHÔNG ĐƯỢC HỖ TRỢ",
+        USER_DATABASE_UPDATE_FAIL: "CẬP NHẬT DANH SÁCH NGƯỜI DÙNG THẤT BẠI",
+        STM32_TIMEOUT_RETRY: "STM32 CHƯA PHẢN HỒI, ĐANG THỬ LẠI",
+        SENT_TO_STM32: "ĐÃ GỬI LỆNH TỚI STM32",
+        FIREBASE_USER_SYNC_RETRY: "ĐANG ĐỒNG BỘ LẠI DỮ LIỆU",
+        ESP_RECOVER_RETRY: "ESP32 ĐANG KHÔI PHỤC LỆNH"
+      };
+      return labels[value] || value || "--";
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function getIsoDate(log) {
+      if (log.iso_date) return String(log.iso_date);
+      const parts = String(log.date || "").split("/");
+      return parts.length === 3 ? `${parts[2]}-${parts[1]}-${parts[0]}` : "";
+    }
+
+    function getResidentKey(log) {
+      return `${normalizeText(log.name || "UNKNOWN")}|${String(log.floor ?? "")}|${String(log.room ?? "")}`;
+    }
+
+    function getCurrentStates() {
+      const states = {};
+      allLogs.forEach(function(log) {
+        const key = getResidentKey(log);
+        const action = normalizeText(log.action);
+        if (!states[key] && (action === "VAO" || action === "RA")) {
+          states[key] = { action, time: log.time || "", date: log.date || "" };
+        }
+      });
+      return states;
+    }
+
+    function buildUserStats(logs) {
+      const users = {};
+      const currentStates = getCurrentStates();
+
+      logs.forEach(function(log) {
+        const key = getResidentKey(log);
+        const name = normalizeText(log.name || "UNKNOWN");
+        const action = normalizeText(log.action);
+
+        if (!users[key]) {
+          users[key] = {
+            key,
+            name,
+            floor: log.floor ?? "",
+            room: log.room ?? "",
+            inCount: 0,
+            outCount: 0,
+            otherCount: 0,
+            lastAccess: ""
+          };
+        }
+
+        if (action === "VAO") users[key].inCount++;
+        else if (action === "RA") users[key].outCount++;
+        else users[key].otherCount++;
+
+        if (!users[key].lastAccess && (action === "VAO" || action === "RA")) {
+          users[key].lastAccess = `${log.time || ""} - ${log.date || ""}`;
+        }
+      });
+
+      return Object.values(users)
+        .sort((a, b) => {
+          const byName = a.name.localeCompare(b.name, "vi");
+          if (byName !== 0) return byName;
+          const byFloor = Number(a.floor || 0) - Number(b.floor || 0);
+          if (byFloor !== 0) return byFloor;
+          return Number(a.room || 0) - Number(b.room || 0);
+        })
+        .map(function(user) {
+          let statusText = "KHÔNG XÁC ĐỊNH";
+          let statusClass = "unknown";
+
+          if (currentStates[user.key]) {
+            if (currentStates[user.key].action === "VAO") {
+              statusText = "ĐANG Ở TRONG CHUNG CƯ";
+              statusClass = "inside";
+            } else if (currentStates[user.key].action === "RA") {
+              statusText = "ĐÃ RA NGOÀI CHUNG CƯ";
+              statusClass = "outside";
+            }
+          }
+
+          return {
+            ...user,
+            totalAccess: user.inCount + user.outCount,
+            statusText,
+            statusClass
+          };
+        });
+    }
+
+    function renderUserStats() {
+      const stats = buildUserStats(filteredLogs);
+      let rows = "";
+
+      stats.forEach(function(user) {
+        rows += `<tr>
+          <td>${escapeHtml(user.name)}</td>
+          <td>${escapeHtml(user.floor)}</td>
+          <td>${escapeHtml(user.room)}</td>
+          <td>${user.inCount}</td>
+          <td>${user.outCount}</td>
+          <td>${user.totalAccess}</td>
+          <td>${user.otherCount}</td>
+          <td><span class="state-badge state-${user.statusClass}">${escapeHtml(user.statusText)}</span></td>
+          <td>${escapeHtml(user.lastAccess)}</td>
+        </tr>`;
+      });
+
+      if (!rows) {
+        rows = `<tr><td colspan="9" class="empty">Hiện tại chưa có dữ liệu người dùng để thống kê.</td></tr>`;
+      }
+
+      document.getElementById("userStats").innerHTML = rows;
+      userStatsSection.classList.remove("hidden");
+    }
+
+    function renderLogTable() {
+      let rows = "";
+
+      filteredLogs.forEach(function(log, index) {
+        rows += `<tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(log.name || "UNKNOWN")}</td>
+          <td><span class="action-badge action-${normalizeText(log.action).toLowerCase()}">${escapeHtml(log.action || "")}</span></td>
+          <td>${escapeHtml(log.floor ?? "")}</td>
+          <td>${escapeHtml(log.room ?? "")}</td>
+          <td>${escapeHtml(log.time || "")}</td>
+          <td>${escapeHtml(log.date || "")}</td>
+        </tr>`;
+      });
+
+      if (!rows) {
+        rows = `<tr><td colspan="7" class="empty">Hiện tại chưa có dữ liệu người dùng để xem lịch sử.</td></tr>`;
+      }
+
+      document.getElementById("logTable").innerHTML = rows;
+    }
+
+    function renderSummaryCards() {
+      const summary = getSummary(filteredLogs);
+      const stats = buildUserStats(filteredLogs);
+      const insideCount = stats.filter(user => user.statusClass === "inside").length;
+
+      summaryTotalRecords.textContent = summary.totalRecords;
+      summaryTotalIn.textContent = summary.totalIn;
+      summaryTotalOut.textContent = summary.totalOut;
+      summaryInside.textContent = insideCount;
+      summaryUsers.textContent = stats.length;
+      summaryCards.classList.remove("hidden");
+    }
+
+    function applyFilters() {
+      const nameValue = normalizeText(searchName.value);
+      const dateValue = filterDate.value;
+      const monthValue = filterMonth.value;
+      const yearValue = String(filterYear.value || "").trim();
+      const actionValue = normalizeText(filterAction.value);
+      const floorValue = String(filterFloor.value || "").trim();
+      const roomValue = String(filterRoom.value || "").trim();
+
+      filteredLogs = allLogs.filter(function(log) {
+        const logName = normalizeText(log.name);
+        const logAction = normalizeText(log.action);
+        const logFloor = String(log.floor ?? "").trim();
+        const logRoom = String(log.room ?? "").trim();
+        const isoDate = getIsoDate(log);
+
+        if (nameValue && !logName.includes(nameValue)) return false;
+        if (dateValue && isoDate !== dateValue) return false;
+        if (monthValue && !isoDate.startsWith(monthValue)) return false;
+        if (yearValue && !isoDate.startsWith(yearValue + "-")) return false;
+        if (actionValue && logAction !== actionValue) return false;
+        if (floorValue && logFloor !== floorValue) return false;
+        if (roomValue && logRoom !== roomValue) return false;
+        return true;
+      });
+
+      filterApplied = true;
+      renderLogTable();
+      renderUserStats();
+      renderSummaryCards();
+    }
+
+    function clearFilters() {
+      searchName.value = "";
+      filterDate.value = "";
+      filterMonth.value = "";
+      filterYear.value = "";
+      filterAction.value = "";
+      filterFloor.value = "";
+      filterRoom.value = "";
+
+      filteredLogs = [...allLogs];
+      filterApplied = false;
+      userStatsSection.classList.add("hidden");
+      summaryCards.classList.add("hidden");
+      renderLogTable();
+    }
+
+
+    function showPage(page) {
+      const showManagement = page === "management";
+      statisticsPage.classList.toggle("hidden-page", showManagement);
+      managementPage.classList.toggle("hidden-page", !showManagement);
+      showStatisticsBtn.classList.toggle("active", !showManagement);
+      showManagementBtn.classList.toggle("active", showManagement);
+    }
+    function commandIsBusy() { const s = normalizeText(currentCommand.status); return s === "PENDING" || s === "PROCESSING"; }
+    function getStatusBadge(status) {
+      const s = normalizeText(status);
+      if (s === "ACTIVE") return '<span class="badge badge-active">ACTIVE</span>';
+      if (s === "PENDING") return '<span class="badge badge-pending">PENDING</span>';
+      return `<span class="badge badge-unknown">${escapeHtml(s || "UNKNOWN")}</span>`;
+    }
+    function renderResidents() {
+      const ids = Object.keys(usersData || {}).map(Number).filter(id => Number.isInteger(id) && id >= 1 && id <= MAX_USERS).sort((a,b)=>a-b);
+      if (!ids.length) { residentTable.innerHTML = '<tr><td colspan="9" class="empty">Hiện tại chưa có người dùng trong danh sách</td></tr>'; return; }
+      const busy = commandIsBusy();
+      residentTable.innerHTML = ids.map(id => {
+        const user = usersData[id] || {}; const status = normalizeText(user.status || "UNKNOWN");
+        const activationCode = status === "PENDING" ? String(user.activation_code || "--") : "--";
+        return `<tr><td>${id}</td><td>${escapeHtml(user.name || "")}</td><td>${escapeHtml(user.floor ?? "")}</td><td>${escapeHtml(user.room ?? "")}</td><td>${getStatusBadge(status)}</td><td>${escapeHtml(activationCode)}</td><td>${user.finger_id ?? id-1}</td><td>${user.duress_finger_id ?? id-1+150}</td><td><div class="user-actions"><button type="button" class="btn-danger" data-action="delete" data-id="${id}" ${busy?"disabled":""}>Xóa</button></div></td></tr>`;
+      }).join("");
+    }
+    function renderCommandSummary() {
+      const status = normalizeText(currentCommand.status || "");
+      const cls = status === "DONE" ? "command-done" : status === "FAILED" ? "command-failed" : status === "PROCESSING" ? "command-processing" : status === "PENDING" ? "command-pending" : "";
+      const commandType = normalizeText(currentCommand.type || "");
+      const activationCode = commandType === "USER_ADD" ? (currentCommand.activation_code || "--") : "--";
+      const translatedStatus = translateCommandStatus(status);
+      const translatedResult = translateCommandResult(currentCommand.result || "");
+
+      commandSummary.innerHTML = `
+        <div class="command-column">
+          <div class="command-row"><span class="command-label">Thao tác:</span><span class="command-value">${escapeHtml(translateCommandType(commandType))}</span></div>
+          <div class="command-row"><span class="command-label">USER_ID:</span><span class="command-value">${escapeHtml(currentCommand.user_id ?? "--")}</span></div>
+          <div class="command-row"><span class="command-label">Tên:</span><span class="command-value">${escapeHtml(currentCommand.name || "--")}</span></div>
+          <div class="command-row"><span class="command-label">Tầng:</span><span class="command-value">${escapeHtml(currentCommand.floor ?? "--")}</span></div>
+        </div>
+        <div class="command-column">
+          <div class="command-row"><span class="command-label">Phòng:</span><span class="command-value">${escapeHtml(currentCommand.room ?? "--")}</span></div>
+          <div class="command-row"><span class="command-label">Mã kích hoạt:</span><span class="command-value">${escapeHtml(activationCode)}</span></div>
+          <div class="command-row"><span class="command-label">Trạng thái:</span><span class="command-value"><span class="command-status ${cls}">${escapeHtml(translatedStatus)}</span></span></div>
+          <div class="command-row"><span class="command-label">Kết quả:</span><span class="command-value">${escapeHtml(translatedResult)}</span></div>
+        </div>`;
+
+      const busy = commandIsBusy();
+      commandBusyNote.classList.toggle("hidden", !busy);
+      addUserBtn.disabled = busy;
+      renderResidents();
+    }
+    async function ensureWebAuth() {
+      const user = auth.currentUser;
+      if (!user || user.uid !== ADMIN_UID) throw new Error("Phiên đăng nhập ADMIN không hợp lệ. Hãy đăng nhập lại.");
+    }
+    async function nextCommandId() {
+      const result = await runTransaction(commandCounterRef, current => Number(current || 0) + 1);
+      if (!result.committed) throw new Error("Không tạo được command_id.");
+      return "CMD" + String(result.snapshot.val()).padStart(6, "0");
+    }
+    async function nextUserVersion(userId) {
+      const versionRef = ref(db, `user_versions/${userId}`);
+      const fallback = Number(usersData[userId]?.version || 0);
+      const result = await runTransaction(versionRef, current => Math.max(Number(current || 0), fallback) + 1);
+      if (!result.committed) throw new Error("Không tạo được version.");
+      return Number(result.snapshot.val());
+    }
+    function validateName(name) {
+      const n = String(name || "").trim();
+      if (!n) throw new Error("Tên người dùng không được để trống.");
+      if (n.length > 12) throw new Error("Tên tối đa 12 ký tự.");
+      if (n.includes("|")) throw new Error("Tên không được chứa ký tự |.");
+      return n;
+    }
+    function validateFloor(floor) {
+      const value = Number(floor);
+      if (!Number.isInteger(value) || value < 1 || value > 99) throw new Error("Số tầng phải nằm trong khoảng 1-99.");
+      return value;
+    }
+
+    function validateRoom(room) {
+      const value = Number(room);
+      if (!Number.isInteger(value) || value < 1 || value > 9999) throw new Error("Số phòng phải nằm trong khoảng 1-9999.");
+      return value;
+    }
+
+    function createActivationCode() {
+      const randomValue = new Uint32Array(1);
+
+      if (window.crypto && window.crypto.getRandomValues) {
+        window.crypto.getRandomValues(randomValue);
+        return String(100000 + (randomValue[0] % 900000));
+      }
+
+      return String(Math.floor(100000 + Math.random() * 900000));
+    }
+
+    function generateActivationCode() {
+      const code = createActivationCode();
+      newUserActivationCode.value = code;
+      return code;
+    }
+
+    function validateActivationCode(code) {
+      const value = String(code || "").trim();
+      if (!/^\d{6}$/.test(value)) throw new Error("Hãy tạo mã kích hoạt gồm đúng 6 chữ số.");
+      return value;
+    }
+
+    async function sendUserCommand(type,userId,name="",floor="",room="",activationCode="") {
+      if (commandIsBusy()) throw new Error("Thiết bị đang xử lý một lệnh khác.");
+      if (!Number.isInteger(userId) || userId < 1 || userId > MAX_USERS) throw new Error(`USER_ID phải nằm trong khoảng 1-${MAX_USERS}.`);
+      await ensureWebAuth();
+      const snap = await get(commandRef); const latest = snap.val() || {}; const s = normalizeText(latest.status);
+      if (s === "PENDING" || s === "PROCESSING") throw new Error("Thiết bị đang xử lý một lệnh khác.");
+      const commandId = await nextCommandId(); const version = await nextUserVersion(userId);
+      const command = {command_id: commandId,type,user_id: userId,version,status: "PENDING",result: ""};
+      command.name = type === "USER_ADD" ? validateName(name) : String(usersData[userId]?.name || "");
+      if (type === "USER_ADD") {
+        command.floor = validateFloor(floor);
+        command.room = validateRoom(room);
+        command.activation_code = validateActivationCode(activationCode);
+      }
+      await set(commandRef,command); return command;
+    }
+    async function executeCommand(type,userId,name="",floor="",room="",activationCode="",confirmMessage="") {
+      try {
+        if (confirmMessage && !window.confirm(confirmMessage)) return;
+        const c = await sendUserCommand(type,userId,name,floor,room,activationCode);
+        const activationText = c.type === "USER_ADD" ? `\nMã kích hoạt: ${c.activation_code}` : "";
+        alert(`Đã gửi yêu cầu ${translateCommandType(c.type).toLowerCase()} cho USER_ID ${c.user_id}.${activationText}`);
+        return c;
+      } catch (e) { console.error(e); alert("Không thể gửi lệnh: " + e.message); return null; }
+    }
+
+    function getExportTimestamp() {
+      const now = new Date();
+      return now.getFullYear() +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        String(now.getDate()).padStart(2, "0") + "_" +
+        String(now.getHours()).padStart(2, "0") +
+        String(now.getMinutes()).padStart(2, "0") +
+        String(now.getSeconds()).padStart(2, "0");
+    }
+
+    function getFilterDescription() {
+      const parts = [];
+      if (searchName.value.trim()) parts.push(`Tên: ${searchName.value.trim()}`);
+      if (filterDate.value) parts.push(`Ngày: ${filterDate.value}`);
+      if (filterMonth.value) parts.push(`Tháng: ${filterMonth.value}`);
+      if (filterYear.value) parts.push(`Năm: ${filterYear.value}`);
+      if (filterAction.value) parts.push(`Trạng thái: ${filterAction.options[filterAction.selectedIndex].text}`);
+      if (filterFloor.value) parts.push(`Tầng: ${filterFloor.value}`);
+      if (filterRoom.value) parts.push(`Phòng: ${filterRoom.value}`);
+      return parts.length ? parts.join(" | ") : "Không áp dụng bộ lọc";
+    }
+
+    function getSummary(logs) {
+      let totalIn = 0;
+      let totalOut = 0;
+      let totalOther = 0;
+
+      logs.forEach(function(log) {
+        const action = normalizeText(log.action);
+        if (action === "VAO") totalIn++;
+        else if (action === "RA") totalOut++;
+        else totalOther++;
+      });
+
+      return {
+        totalIn,
+        totalOut,
+        totalAccess: totalIn + totalOut,
+        totalOther,
+        totalRecords: logs.length
+      };
+    }
+
+    async function exportExcelFormatted() {
+      if (!filteredLogs.length) {
+        alert("Không có dữ liệu để xuất.");
+        return;
+      }
+
+      if (typeof ExcelJS === "undefined" || typeof saveAs === "undefined") {
+        alert("Không tải được thư viện xuất Excel. Hãy kiểm tra kết nối Internet rồi thử lại.");
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "Hệ thống kiểm soát ra vào chung cư mini";
+      workbook.created = new Date();
+
+      const historySheet = workbook.addWorksheet("Lịch sử ra vào");
+
+      historySheet.mergeCells("A1:G1");
+      historySheet.getCell("A1").value = "THỐNG KÊ LỊCH SỬ RA VÀO CHUNG CƯ MINI";
+      historySheet.getCell("A1").font = { bold: true, size: 16 };
+      historySheet.getCell("A1").alignment = { horizontal: "center", vertical: "middle" };
+      historySheet.getRow(1).height = 26;
+
+      historySheet.mergeCells("A2:G2");
+      historySheet.getCell("A2").value = `Ngày giờ xuất: ${new Date().toLocaleString("vi-VN")}`;
+      historySheet.getCell("A2").font = { italic: true };
+
+      const historyHeader = historySheet.addRow([
+        "STT", "Tên", "Trạng thái", "Tầng", "Phòng", "Thời gian", "Ngày"
+      ]);
+
+      historyHeader.eachCell(function(cell) {
+        cell.font = { bold: true };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+        cell.border = {
+          top: { style: "thin" },
+          left: { style: "thin" },
+          bottom: { style: "thin" },
+          right: { style: "thin" }
+        };
+      });
+
+      filteredLogs.forEach(function(log, index) {
+        const row = historySheet.addRow([
+          index + 1,
+          log.name || "UNKNOWN",
+          log.action || "",
+          log.floor ?? "",
+          log.room ?? "",
+          log.time || "",
+          log.date || ""
+        ]);
+
+        row.eachCell(function(cell) {
+          cell.alignment = { vertical: "middle" };
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" }
+          };
+        });
+
+        row.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
+      });
+
+      historySheet.columns = [
+        { width: 8 },
+        { width: 22 },
+        { width: 16 },
+        { width: 10 },
+        { width: 12 },
+        { width: 13 },
+        { width: 16 }
+      ];
+
+      historySheet.autoFilter = `A3:G${Math.max(3, historySheet.rowCount)}`;
+
+      if (filterApplied) {
+        const stats = buildUserStats(filteredLogs);
+        const statsSheet = workbook.addWorksheet("Thống kê người dùng");
+
+        statsSheet.mergeCells("A1:I1");
+        statsSheet.getCell("A1").value = "THỐNG KÊ NGƯỜI DÙNG";
+        statsSheet.getCell("A1").font = { bold: true, size: 16 };
+        statsSheet.getCell("A1").alignment = { horizontal: "center", vertical: "middle" };
+        statsSheet.getRow(1).height = 26;
+
+        statsSheet.mergeCells("A2:I2");
+        statsSheet.getCell("A2").value = `Ngày giờ xuất: ${new Date().toLocaleString("vi-VN")}`;
+        statsSheet.getCell("A2").font = { italic: true };
+
+        const statsHeader = statsSheet.addRow([
+          "Tên",
+          "Tầng",
+          "Phòng",
+          "Số lần vào",
+          "Số lần ra",
+          "Tổng số lần ra vào",
+          "Bản ghi khác",
+          "Trạng thái hiện tại",
+          "Lần ra vào gần nhất"
+        ]);
+
+        statsHeader.eachCell(function(cell) {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+          cell.border = {
+            top: { style: "thin" },
+            left: { style: "thin" },
+            bottom: { style: "thin" },
+            right: { style: "thin" }
+          };
+        });
+
+        stats.forEach(function(user) {
+          const row = statsSheet.addRow([
+            user.name,
+            user.floor,
+            user.room,
+            user.inCount,
+            user.outCount,
+            user.totalAccess,
+            user.otherCount,
+            user.statusText,
+            user.lastAccess
+          ]);
+
+          row.eachCell(function(cell) {
+            cell.alignment = { vertical: "middle" };
+            cell.border = {
+              top: { style: "thin" },
+              left: { style: "thin" },
+              bottom: { style: "thin" },
+              right: { style: "thin" }
+            };
+          });
+        });
+
+        statsSheet.columns = [
+          { width: 20 },
+          { width: 10 },
+          { width: 12 },
+          { width: 14 },
+          { width: 14 },
+          { width: 20 },
+          { width: 16 },
+          { width: 30 },
+          { width: 25 }
+        ];
+
+        statsSheet.autoFilter = `A3:I${Math.max(3, statsSheet.rowCount)}`;
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      saveAs(
+        new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }),
+        `bao_cao_ra_vao_${getExportTimestamp()}.xlsx`
+      );
+    }
+
+    function createPdfReportElement() {
+      const report = document.createElement("div");
+      report.className = "pdf-report";
+
+      const stats = filterApplied ? buildUserStats(filteredLogs) : [];
+
+      let statsHtml = "";
+      if (filterApplied) {
+        let rows = stats.map(function(user) {
+          return `<tr>
+            <td>${escapeHtml(user.name)}</td>
+            <td>${escapeHtml(user.floor)}</td>
+            <td>${escapeHtml(user.room)}</td>
+            <td>${user.inCount}</td>
+            <td>${user.outCount}</td>
+            <td>${user.totalAccess}</td>
+            <td>${user.otherCount}</td>
+            <td>${escapeHtml(user.statusText)}</td>
+            <td>${escapeHtml(user.lastAccess)}</td>
+          </tr>`;
+        }).join("");
+
+        if (!rows) rows = `<tr><td colspan="9">Không có dữ liệu thống kê.</td></tr>`;
+
+        statsHtml = `
+          <h2>THỐNG KÊ NGƯỜI DÙNG</h2>
+          <table>
+            <thead><tr>
+              <th>Tên</th><th>Tầng</th><th>Phòng</th>
+              <th>Số lần vào</th><th>Số lần ra</th>
+              <th>Tổng số lần ra vào</th><th>Bản ghi khác</th>
+              <th>Trạng thái hiện tại</th><th>Lần ra vào gần nhất</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      }
+
+      const historyRows = filteredLogs.map(function(log, index) {
+        return `<tr>
+          <td>${index + 1}</td>
+          <td>${escapeHtml(log.name || "UNKNOWN")}</td>
+          <td>${escapeHtml(log.action || "")}</td>
+          <td>${escapeHtml(log.floor ?? "")}</td>
+          <td>${escapeHtml(log.room ?? "")}</td>
+          <td>${escapeHtml(log.time || "")}</td>
+          <td>${escapeHtml(log.date || "")}</td>
+        </tr>`;
+      }).join("");
+
+      report.innerHTML = `
+        <h1 class="report-title">THỐNG KÊ LỊCH SỬ RA VÀO CHUNG CƯ MINI</h1>
+        <p class="report-meta"><b>Ngày giờ xuất:</b> ${escapeHtml(new Date().toLocaleString("vi-VN"))}</p>
+        ${statsHtml}
+        <h2>LỊCH SỬ RA VÀO</h2>
+        <table>
+          <thead><tr>
+            <th>STT</th><th>Tên</th><th>Trạng thái</th>
+            <th>Tầng</th><th>Phòng</th><th>Thời gian</th><th>Ngày</th>
+          </tr></thead>
+          <tbody>${historyRows}</tbody>
+        </table>`;
+
+      document.body.appendChild(report);
+      return report;
+    }
+
+    async function exportPdfReport() {
+      if (!filteredLogs.length) {
+        alert("Không có dữ liệu để xuất.");
+        return;
+      }
+
+      if (typeof html2canvas === "undefined" || !window.jspdf) {
+        alert("Không tải được thư viện xuất PDF. Hãy kiểm tra kết nối Internet rồi thử lại.");
+        return;
+      }
+
+      const report = createPdfReportElement();
+
+      try {
+        const canvas = await html2canvas(report, {
+          scale: 1.5,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          logging: false
+        });
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF("p", "mm", "a4");
+        const pageWidth = 210;
+        const pageHeight = 297;
+        const margin = 8;
+        const printableWidth = pageWidth - margin * 2;
+        const printableHeight = pageHeight - margin * 2;
+
+        const sourcePageHeight = Math.floor(canvas.width * printableHeight / printableWidth);
+        let sourceY = 0;
+        let pageIndex = 0;
+
+        while (sourceY < canvas.height) {
+          const sliceHeight = Math.min(sourcePageHeight, canvas.height - sourceY);
+          const pageCanvas = document.createElement("canvas");
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sliceHeight;
+          const context = pageCanvas.getContext("2d");
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          context.drawImage(
+            canvas,
+            0, sourceY, canvas.width, sliceHeight,
+            0, 0, canvas.width, sliceHeight
+          );
+
+          if (pageIndex > 0) pdf.addPage();
+          const renderedHeight = sliceHeight * printableWidth / canvas.width;
+          pdf.addImage(
+            pageCanvas.toDataURL("image/jpeg", 0.95),
+            "JPEG",
+            margin,
+            margin,
+            printableWidth,
+            renderedHeight
+          );
+
+          sourceY += sliceHeight;
+          pageIndex++;
+        }
+
+        pdf.save(`bao_cao_ra_vao_${getExportTimestamp()}.pdf`);
+      } finally {
+        report.remove();
+      }
+    }
+
+    async function exportSelectedFile() {
+      const format = document.getElementById("exportFormat").value;
+      const button = document.getElementById("exportFileBtn");
+      const originalText = button.textContent;
+      button.disabled = true;
+      button.textContent = "Đang tạo file...";
+
+      try {
+        if (format === "pdf") await exportPdfReport();
+        else await exportExcelFormatted();
+      } catch (error) {
+        console.error("Export error:", error);
+        alert("Không thể xuất file: " + error.message);
+      } finally {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    }
+
+    document.getElementById("applyFilterBtn").addEventListener("click", applyFilters);
+    document.getElementById("clearFilterBtn").addEventListener("click", clearFilters);
+    document.getElementById("exportFileBtn").addEventListener("click", exportSelectedFile);
+
+
+    showStatisticsBtn.addEventListener("click", () => showPage("statistics"));
+    showManagementBtn.addEventListener("click", () => showPage("management"));
+    generateActivationCodeBtn.addEventListener("click", generateActivationCode);
+    newUserId.addEventListener("input", () => { newUserActivationCode.value = ""; });
+    addUserBtn.addEventListener("click", async () => {
+      const id = Number(newUserId.value);
+      const name = newUserName.value;
+      const floor = newUserFloor.value;
+      const room = newUserRoom.value;
+      const activationCode = newUserActivationCode.value || generateActivationCode();
+      if (usersData[id]) { alert("User_ID này đã tồn tại. Hãy đổi User_ID khác và thử lại."); return; }
+      await executeCommand("USER_ADD",id,name,floor,room,activationCode);
+    });
+    residentTable.addEventListener("click", async event => {
+      const b = event.target.closest("button[data-action]"); if (!b) return;
+      const id = Number(b.dataset.id); const user = usersData[id] || {}; const action = b.dataset.action;
+      if (action === "delete") await executeCommand("USER_DELETE",id,"","","","",`Xóa USER_ID ${id} - ${user.name || ""}?\nThao tác này sẽ xóa mọi phương thức xác thực của người dùng này và xóa người dùng khỏi hệ thống.`);
+    });
+    function setLoginMessage(message, type = "error") {
+      loginMessage.textContent = message || "";
+      loginMessage.className = "login-message" + (message ? ` ${type}` : "");
+    }
+
+    function showLoginScreen() {
+      appShell.classList.add("hidden");
+      loginScreen.classList.remove("hidden");
+      appShell.style.display = "none";
+      loginScreen.style.display = "flex";
+      adminEmailLabel.textContent = "--";
+      setTimeout(() => loginEmail.focus(), 0);
+    }
+
+    function showAdminDashboard(user) {
+      loginScreen.classList.add("hidden");
+      appShell.classList.remove("hidden");
+      loginScreen.style.display = "none";
+      appShell.style.display = "block";
+      adminEmailLabel.textContent = "ADMIN";
+      setLoginMessage("");
+      showPage("statistics");
+    }
+
+    function resetDashboardData() {
+      usersData = {};
+      currentCommand = {};
+      allLogs = [];
+      filteredLogs = [];
+      filterApplied = false;
+      connectionStatus.textContent = "Đang chờ kết nối Server...";
+      connectionStatus.className = "status-line";
+      residentTable.innerHTML = '<tr><td colspan="9" class="empty">Đang đọc dữ liệu người dùng...</td></tr>';
+      renderCommandSummary();
+      commandBusyNote.classList.add("hidden");
+      userStatsSection.classList.add("hidden");
+      summaryCards.classList.add("hidden");
+      document.getElementById("logTable").innerHTML = '<tr><td colspan="7" class="empty">Hiện tại chưa có dữ liệu người dùng để xem lịch sử.</td></tr>';
+    }
+
+    function stopDatabaseListeners() {
+      databaseUnsubscribers.forEach(unsubscribe => {
+        try { unsubscribe(); } catch (error) { console.warn("Không thể dừng listener:", error); }
+      });
+      databaseUnsubscribers = [];
+      databaseListenersStarted = false;
+    }
+
+    function startDatabaseListeners() {
+      if (databaseListenersStarted) return;
+      databaseListenersStarted = true;
+      connectionStatus.textContent = "Đang kết nối Server...";
+      connectionStatus.className = "status-line";
+
+      databaseUnsubscribers.push(onValue(usersRef, snapshot => {
+        usersData = snapshot.val() || {};
+        renderResidents();
+      }, error => {
+        residentTable.innerHTML = `<tr><td colspan="9" class="empty">Không đọc được danh sách người dùng: ${escapeHtml(error.message)}</td></tr>`;
+      }));
+
+      databaseUnsubscribers.push(onValue(commandRef, snapshot => {
+        currentCommand = snapshot.val() || {};
+        renderCommandSummary();
+      }, error => {
+        commandSummary.innerHTML = `<div class="command-failed">Không đọc được lệnh: ${escapeHtml(error.message)}</div>`;
+      }));
+
+      databaseUnsubscribers.push(onValue(logsRef, function(snapshot) {
+        const data = snapshot.val();
+        const logs = [];
+
+        if (data) {
+          Object.keys(data).forEach(function(key) {
+            const value = data[key] || {};
+            logs.push({
+              firebaseKey: key,
+              name: value.name || "UNKNOWN",
+              action: value.action || "",
+              floor: value.floor ?? "",
+              room: value.room ?? "",
+              time: value.time || "",
+              date: value.date || "",
+              iso_date: value.iso_date || ""
+            });
+          });
+        }
+
+        logs.sort(function(a, b) {
+          return b.firebaseKey.localeCompare(a.firebaseKey);
+        });
+
+        allLogs = logs;
+
+        if (filterApplied) {
+          applyFilters();
+        } else {
+          filteredLogs = [...allLogs];
+          renderLogTable();
+          userStatsSection.classList.add("hidden");
+        }
+
+        connectionStatus.textContent = `Đã kết nối Server - cập nhật gần nhất: ${new Date().toLocaleString("vi-VN")}`;
+        connectionStatus.className = "status-line online";
+      }, function(error) {
+        console.error("Firebase error:", error);
+        connectionStatus.textContent = "Không đọc được dữ liệu Server: " + error.message;
+        connectionStatus.className = "status-line error";
+      }));
+    }
+
+    function getFriendlyAuthError(error) {
+      const code = String(error?.code || "");
+      if (code === "auth/invalid-email") return "Email không đúng định dạng.";
+      if (code === "auth/missing-password") return "Chưa nhập mật khẩu.";
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") return "Email hoặc mật khẩu không đúng.";
+      if (code === "auth/too-many-requests") return "Đăng nhập sai quá nhiều lần. Hãy chờ rồi thử lại.";
+      if (code === "auth/network-request-failed") return "Không thể kết nối máy chủ Firebase. Hãy kiểm tra Internet hoặc thử lại bằng mạng khác.";
+      if (code === "auth/operation-not-allowed") return "Phương thức Email/Mật khẩu chưa được bật trong Firebase Authentication.";
+      if (code === "auth/user-disabled") return "Tài khoản ADMIN đang bị vô hiệu hóa trong Firebase Authentication.";
+      if (code === "auth/unauthorized-domain") return "Tên miền website chưa được cho phép trong Firebase Authentication.";
+      if (code === "auth/login-timeout") return "Firebase không phản hồi sau 20 giây. Hãy thử lại bằng mạng khác hoặc tải lại trang.";
+      return `${error?.message || "Không thể đăng nhập Firebase."}${code ? ` (${code})` : ""}`;
+    }
+
+    loginForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value;
+
+      if (!email || !password) {
+        setLoginMessage("Hãy nhập đầy đủ email và mật khẩu.");
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = "ĐANG ĐĂNG NHẬP...";
+      setLoginMessage("");
+
+      let timeoutId;
+      try {
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            const timeoutError = new Error("Firebase login timeout");
+            timeoutError.code = "auth/login-timeout";
+            reject(timeoutError);
+          }, 20000);
+        });
+
+        const credential = await Promise.race([
+          signInWithEmailAndPassword(auth, email, password),
+          timeoutPromise
+        ]);
+
+        if (credential.user.uid !== ADMIN_UID) {
+          await signOut(auth);
+          throw new Error("Tài khoản này không có quyền quản trị website.");
+        }
+
+        loginPassword.value = "";
+        showAdminDashboard(credential.user);
+        startDatabaseListeners();
+      } catch (error) {
+        console.error("Login error:", error);
+        setLoginMessage(getFriendlyAuthError(error));
+      } finally {
+        if (timeoutId) clearTimeout(timeoutId);
+        loginBtn.disabled = false;
+        loginBtn.textContent = "ĐĂNG NHẬP";
+      }
+    });
+
+    logoutBtn.addEventListener("click", async () => {
+      logoutBtn.disabled = true;
+      try {
+        await signOut(auth);
+        setLoginMessage("Đã đăng xuất khỏi hệ thống.", "success");
+      } catch (error) {
+        console.error("Logout error:", error);
+        alert("Không thể đăng xuất: " + error.message);
+      } finally {
+        logoutBtn.disabled = false;
+      }
+    });
+
+    onAuthStateChanged(auth, async user => {
+      if (user && user.uid === ADMIN_UID) {
+        showAdminDashboard(user);
+        startDatabaseListeners();
+        return;
+      }
+
+      stopDatabaseListeners();
+      resetDashboardData();
+      showLoginScreen();
+
+      if (user) {
+        setLoginMessage("Tài khoản hiện tại không có quyền quản trị website.");
+        try { await signOut(auth); } catch (error) { console.error("Sign-out unauthorized user error:", error); }
+      }
+    });
+  </script>
+</body>
+</html>
